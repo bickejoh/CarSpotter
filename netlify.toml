@@ -2,7 +2,7 @@
 # Tells Netlify where to find your site and your serverless functions
 
 [build]
-  publish = "public"
+  publish = "."
   functions = "netlify/functions"
 
 [[redirects]]
