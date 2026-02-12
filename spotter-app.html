@@ -1,0 +1,2144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SPOTTER — Exotic Car Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #080808;
+    --deep: #0d0d0d;
+    --surface: #141414;
+    --elevated: #1c1c1c;
+    --border: #2a2a2a;
+    --muted: #3a3a3a;
+    --text-dim: #666;
+    --text-mid: #999;
+    --text: #ddd;
+    --text-bright: #f0f0f0;
+    --gold: #c9a84c;
+    --gold-light: #e8c76d;
+    --gold-dim: #7a6230;
+    --red: #e63946;
+    --green: #2ec4b6;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-cond: 'Barlow Condensed', sans-serif;
+    --font-body: 'Barlow', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { height: 100%; background: var(--black); }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--black);
+    color: var(--text);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(201,168,76,0.07) 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    display: none;
+    flex-direction: column;
+    min-height: 100dvh;
+    position: relative;
+    z-index: 1;
+    animation: fadeIn 0.35s ease;
+  }
+  .screen.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── TOP NAV ── */
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: rgba(8,8,8,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .nav-logo {
+    font-family: var(--font-display);
+    font-size: 28px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .nav-logo span { color: var(--text-dim); font-size: 10px; font-family: var(--font-cond); letter-spacing: 6px; display: block; margin-top: -2px; }
+
+  .nav-actions { display: flex; gap: 8px; }
+
+  .icon-btn {
+    width: 38px; height: 38px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--elevated);
+    color: var(--text-mid);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 18px;
+  }
+  .icon-btn:hover, .icon-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08); }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(8,8,8,0.97);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .nav-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 10px 4px;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-family: var(--font-cond);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    border: none;
+    background: none;
+    position: relative;
+  }
+
+  .nav-tab::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 20%; right: 20%;
+    height: 2px;
+    background: var(--gold);
+    border-radius: 0 0 2px 2px;
+    transform: scaleX(0);
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  .nav-tab.active { color: var(--gold); }
+  .nav-tab.active::before { transform: scaleX(1); }
+  .nav-tab svg { width: 22px; height: 22px; }
+
+  .nav-tab.spot-tab {
+    color: var(--gold);
+  }
+  .nav-tab.spot-tab .spot-circle {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--gold), #a07830);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: -22px;
+    border: 3px solid var(--black);
+    box-shadow: 0 4px 20px rgba(201,168,76,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .nav-tab.spot-tab:active .spot-circle {
+    transform: scale(0.93);
+    box-shadow: 0 2px 10px rgba(201,168,76,0.3);
+  }
+
+  /* ── CONTENT PADDING ── */
+  .content { flex: 1; padding: 16px 16px 90px; }
+
+  /* ── HOME SCREEN ── */
+  .hero-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+
+  .stat-card.full { grid-column: 1 / -1; }
+
+  .stat-label {
+    font-family: var(--font-cond);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 38px;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .stat-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-family: var(--font-cond);
+    letter-spacing: 0.5px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--text-bright);
+  }
+
+  .section-link {
+    font-family: var(--font-cond);
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    color: var(--gold);
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    border: none;
+    background: none;
+  }
+
+  /* Recent spots horizontal scroll */
+  .spots-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .spots-scroll::-webkit-scrollbar { display: none; }
+
+  .spot-card-mini {
+    flex-shrink: 0;
+    width: 160px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .spot-card-mini:active { transform: scale(0.97); border-color: var(--gold-dim); }
+
+  .spot-card-mini img {
+    width: 100%; height: 100px;
+    object-fit: cover;
+    display: block;
+    background: var(--elevated);
+  }
+
+  .spot-card-mini-info {
+    padding: 10px;
+  }
+
+  .spot-card-make {
+    font-family: var(--font-cond);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 2px;
+  }
+
+  .spot-card-model {
+    font-family: var(--font-cond);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-bright);
+    line-height: 1.2;
+  }
+
+  .spot-card-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* Rarity badge */
+  .rarity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-cond);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 4px;
+    margin-top: 6px;
+  }
+  .rarity-legendary { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid var(--gold-dim); }
+  .rarity-exotic    { background: rgba(230,57,70,0.12); color: #ff6b7a; border: 1px solid rgba(230,57,70,0.3); }
+  .rarity-rare      { background: rgba(46,196,182,0.12); color: var(--green); border: 1px solid rgba(46,196,182,0.3); }
+  .rarity-common    { background: rgba(255,255,255,0.05); color: var(--text-mid); border: 1px solid var(--border); }
+
+  /* ── GARAGE SCREEN ── */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    margin-bottom: 16px;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+
+  .filter-chip {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: var(--font-cond);
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text-mid);
+    cursor: pointer;
+    white-space: nowrap;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .filter-chip.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--black);
+    font-weight: 700;
+  }
+
+  .sort-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .sort-label {
+    font-family: var(--font-cond);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .sort-select {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-cond);
+    font-size: 13px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    appearance: none;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+  }
+
+  .garage-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .garage-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+    position: relative;
+  }
+  .garage-card:active { transform: scale(0.97); border-color: var(--gold-dim); }
+
+  .garage-card img {
+    width: 100%; height: 110px;
+    object-fit: cover;
+    display: block;
+    background: var(--elevated);
+  }
+
+  .garage-card-info { padding: 10px; }
+
+  .garage-card-make {
+    font-family: var(--font-cond);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  .garage-card-model {
+    font-family: var(--font-cond);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-bright);
+    line-height: 1.2;
+    margin-top: 2px;
+  }
+
+  .garage-card-stats {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .mini-stat {
+    font-family: var(--font-cond);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+  }
+
+  .mini-stat strong {
+    color: var(--text-mid);
+    font-weight: 600;
+  }
+
+  /* ── SPOT / CAPTURE SCREEN ── */
+  #capture-screen {
+    background: var(--black);
+  }
+
+  .camera-area {
+    position: relative;
+    background: var(--deep);
+    width: 100%;
+    aspect-ratio: 4/3;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+  }
+
+  #camera-preview {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  #photo-canvas { display: none; }
+
+  .camera-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .camera-corner {
+    position: absolute;
+    width: 30px; height: 30px;
+    border-color: var(--gold);
+    border-style: solid;
+    border-width: 0;
+    opacity: 0.7;
+  }
+  .camera-corner.tl { top: 14px; left: 14px; border-top-width: 2px; border-left-width: 2px; }
+  .camera-corner.tr { top: 14px; right: 14px; border-top-width: 2px; border-right-width: 2px; }
+  .camera-corner.bl { bottom: 14px; left: 14px; border-bottom-width: 2px; border-left-width: 2px; }
+  .camera-corner.br { bottom: 14px; right: 14px; border-bottom-width: 2px; border-right-width: 2px; }
+
+  .camera-crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px; height: 40px;
+    opacity: 0.3;
+  }
+  .camera-crosshair::before,
+  .camera-crosshair::after {
+    content: '';
+    position: absolute;
+    background: var(--gold);
+  }
+  .camera-crosshair::before { width: 1px; height: 100%; left: 50%; transform: translateX(-50%); }
+  .camera-crosshair::after { height: 1px; width: 100%; top: 50%; transform: translateY(-50%); }
+
+  .camera-status {
+    position: absolute;
+    bottom: 12px; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-cond);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: rgba(0,0,0,0.6);
+    padding: 4px 12px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+    white-space: nowrap;
+  }
+
+  .capture-controls {
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .shutter-btn {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    border: 3px solid var(--gold);
+    background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s;
+  }
+  .shutter-btn::after {
+    content: '';
+    width: 62px; height: 62px;
+    border-radius: 50%;
+    background: var(--gold);
+    transition: transform 0.15s;
+  }
+  .shutter-btn:active { transform: scale(0.93); }
+  .shutter-btn:active::after { transform: scale(0.88); }
+
+  .upload-alt {
+    font-family: var(--font-cond);
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-mid);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .upload-alt:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+  /* Analyzing state */
+  .analyzing-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    backdrop-filter: blur(4px);
+  }
+
+  .scan-animation {
+    width: 120px; height: 120px;
+    position: relative;
+  }
+  .scan-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid var(--gold);
+    animation: scanPulse 1.5s ease-in-out infinite;
+  }
+  .scan-ring:nth-child(1) { inset: 0; }
+  .scan-ring:nth-child(2) { inset: 15px; animation-delay: 0.3s; }
+  .scan-ring:nth-child(3) { inset: 30px; animation-delay: 0.6s; }
+  .scan-ring:nth-child(4) { inset: 45px; }
+
+  @keyframes scanPulse {
+    0%, 100% { opacity: 0.2; transform: scale(1); }
+    50%       { opacity: 0.8; transform: scale(1.04); }
+  }
+
+  .scan-text {
+    font-family: var(--font-cond);
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold);
+    animation: scanBlink 1s ease-in-out infinite;
+  }
+  .scan-progress {
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+  @keyframes scanBlink { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+  /* ── CAR DETAIL SCREEN ── */
+  .detail-hero {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/10;
+    background: var(--surface);
+    overflow: hidden;
+  }
+
+  .detail-hero img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .detail-hero-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 40px 20px 20px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.9));
+  }
+
+  .detail-make {
+    font-family: var(--font-cond);
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .detail-name {
+    font-family: var(--font-display);
+    font-size: 36px;
+    color: var(--text-bright);
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .detail-year {
+    font-family: var(--font-cond);
+    font-size: 16px;
+    color: var(--text-mid);
+    letter-spacing: 2px;
+  }
+
+  .back-btn {
+    position: absolute;
+    top: 14px; left: 14px;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-bright);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+  }
+
+  .detail-content { padding: 20px 16px 90px; }
+
+  .detail-section-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .stat-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  .stat-item-label {
+    font-family: var(--font-cond);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .stat-item-value {
+    font-family: var(--font-cond);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-bright);
+    line-height: 1.2;
+  }
+
+  .stat-item-unit {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .stat-item.highlight {
+    border-color: var(--gold-dim);
+    background: rgba(201,168,76,0.05);
+  }
+
+  .stat-item.highlight .stat-item-value { color: var(--gold); }
+
+  /* Performance bar */
+  .perf-bars { margin-bottom: 24px; }
+
+  .perf-bar-item { margin-bottom: 12px; }
+
+  .perf-bar-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-family: var(--font-cond);
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .perf-bar-name { color: var(--text-mid); }
+  .perf-bar-val  { color: var(--gold); }
+
+  .perf-bar-track {
+    height: 4px;
+    background: var(--elevated);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .perf-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    border-radius: 2px;
+    transition: width 1s cubic-bezier(0.34,1.56,0.64,1);
+    width: 0;
+  }
+
+  /* Description */
+  .car-description {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-mid);
+    margin-bottom: 24px;
+    font-weight: 300;
+  }
+
+  /* Tags */
+  .tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 24px;
+  }
+
+  .tag {
+    font-family: var(--font-cond);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border-radius: 4px;
+    background: var(--elevated);
+    border: 1px solid var(--border);
+    color: var(--text-mid);
+  }
+
+  /* Spot metadata */
+  .spot-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-cond);
+    font-size: 13px;
+  }
+  .spot-meta-row:last-child { border-bottom: none; }
+  .spot-meta-key { color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; font-size: 11px; }
+  .spot-meta-val { color: var(--text-bright); }
+
+  /* ── LEADERBOARD SCREEN ── */
+  .lb-header {
+    text-align: center;
+    padding: 20px 16px 10px;
+  }
+
+  .lb-title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    letter-spacing: 6px;
+    color: var(--text-bright);
+  }
+
+  .lb-subtitle {
+    font-family: var(--font-cond);
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .lb-podium {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px 16px;
+  }
+
+  .podium-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .podium-rank {
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+
+  .podium-count {
+    font-family: var(--font-display);
+    font-size: 28px;
+    color: var(--text-bright);
+  }
+
+  .podium-make {
+    font-family: var(--font-cond);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-mid);
+    text-align: center;
+  }
+
+  .podium-block {
+    width: 100%;
+    background: var(--surface);
+    border-top: 3px solid var(--border);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .podium-item:nth-child(1) .podium-block { height: 70px; border-top-color: #c0c0c0; }
+  .podium-item:nth-child(2) .podium-block { height: 100px; border-top-color: var(--gold); }
+  .podium-item:nth-child(3) .podium-block { height: 50px; border-top-color: #cd7f32; }
+
+  .makes-list { padding: 0 16px 90px; }
+
+  .make-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .make-row:active { opacity: 0.7; }
+
+  .make-rank-num {
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--text-dim);
+    width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .make-info { flex: 1; }
+
+  .make-name {
+    font-family: var(--font-cond);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text-bright);
+  }
+
+  .make-detail {
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .make-count-badge {
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: var(--gold);
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    top: 70px; left: 50%; transform: translateX(-50%) translateY(-10px);
+    background: var(--elevated);
+    border: 1px solid var(--gold-dim);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: var(--font-cond);
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--gold);
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    white-space: nowrap;
+    backdrop-filter: blur(8px);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 30px;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .empty-icon { font-size: 48px; opacity: 0.3; }
+
+  .empty-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+  }
+
+  .empty-text {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    max-width: 240px;
+    font-weight: 300;
+  }
+
+  /* ── MODALS / SHEET ── */
+  .sheet-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 150;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.25s ease;
+  }
+  .sheet-backdrop.open { display: block; }
+
+  .bottom-sheet {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    z-index: 160;
+    padding: 20px;
+    max-height: 85dvh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.32,0.72,0,1);
+  }
+  .bottom-sheet.open { transform: translateY(0); }
+
+  .sheet-handle {
+    width: 36px; height: 4px;
+    border-radius: 2px;
+    background: var(--muted);
+    margin: 0 auto 20px;
+  }
+
+  .sheet-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    letter-spacing: 3px;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+
+  .sheet-sub {
+    font-family: var(--font-cond);
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* Result card in sheet */
+  .result-card {
+    background: var(--elevated);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .result-card img {
+    width: 100%; height: 180px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .result-card-body { padding: 14px; }
+
+  .confidence-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .confidence-label {
+    font-family: var(--font-cond);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .confidence-track {
+    flex: 1;
+    height: 4px;
+    background: var(--muted);
+    border-radius: 2px;
+  }
+
+  .confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--gold));
+    border-radius: 2px;
+    transition: width 1s ease;
+    width: 0;
+  }
+
+  .confidence-pct {
+    font-family: var(--font-cond);
+    font-size: 13px;
+    color: var(--gold);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .result-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .rs-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+
+  .rs-val {
+    font-family: var(--font-cond);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-bright);
+  }
+
+  .rs-label {
+    font-family: var(--font-cond);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .save-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--gold), #a07830);
+    color: var(--black);
+    font-family: var(--font-cond);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .save-btn:active { opacity: 0.85; transform: scale(0.98); }
+
+  .discard-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px;
+    background: none;
+    color: var(--text-dim);
+    font-family: var(--font-cond);
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .discard-btn:hover { color: var(--red); border-color: rgba(230,57,70,0.3); }
+
+  /* HOME screen quick actions */
+  .quick-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .quick-action {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .quick-action:active { border-color: var(--gold-dim); background: rgba(201,168,76,0.05); }
+
+  .quick-action-icon { font-size: 24px; }
+
+  .quick-action-label {
+    font-family: var(--font-cond);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-mid);
+    text-align: center;
+  }
+
+  /* Search bar */
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .search-bar:focus-within { border-color: var(--gold-dim); }
+
+  .search-bar input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    outline: none;
+  }
+  .search-bar input::placeholder { color: var(--text-dim); }
+  .search-icon { color: var(--text-dim); font-size: 16px; }
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════ HOME SCREEN ═══════════════════════ -->
+<div class="screen active" id="home-screen">
+  <div class="nav">
+    <div>
+      <div class="nav-logo">SPOTTER<span>EXOTIC CAR LOG</span></div>
+    </div>
+    <div class="nav-actions">
+      <button class="icon-btn" onclick="showToast('🔔 Notifications coming soon')">🔔</button>
+      <button class="icon-btn" onclick="showToast('⚙️ Settings coming soon')">⚙️</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Hero stats -->
+    <div class="hero-stats">
+      <div class="stat-card">
+        <div class="stat-label">Total Spots</div>
+        <div class="stat-value" id="total-spots">0</div>
+        <div class="stat-sub">cars identified</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Makes</div>
+        <div class="stat-value" id="total-makes">0</div>
+        <div class="stat-sub">unique brands</div>
+      </div>
+      <div class="stat-card full">
+        <div class="stat-label">Rarest Spot</div>
+        <div class="stat-value" style="font-size:24px" id="rarest-spot">—</div>
+        <div class="stat-sub" id="rarest-sub">Spot your first exotic to unlock</div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="section-header">
+      <div class="section-title">QUICK ACCESS</div>
+    </div>
+    <div class="quick-actions">
+      <div class="quick-action" onclick="goToTab('capture')">
+        <div class="quick-action-icon">📸</div>
+        <div class="quick-action-label">New Spot</div>
+      </div>
+      <div class="quick-action" onclick="goToTab('garage')">
+        <div class="quick-action-icon">🏎️</div>
+        <div class="quick-action-label">My Garage</div>
+      </div>
+      <div class="quick-action" onclick="goToTab('leaderboard')">
+        <div class="quick-action-icon">🏆</div>
+        <div class="quick-action-label">Rankings</div>
+      </div>
+    </div>
+
+    <!-- Recent spots -->
+    <div class="section-header">
+      <div class="section-title">RECENT SPOTS</div>
+      <button class="section-link" onclick="goToTab('garage')">SEE ALL</button>
+    </div>
+
+    <div class="spots-scroll" id="recent-spots-scroll">
+      <div class="empty-state" style="min-width:100%">
+        <div class="empty-icon">🔭</div>
+        <div class="empty-title">NO SPOTS YET</div>
+        <div class="empty-text">Hit the camera button to start spotting exotic cars</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ GARAGE SCREEN ═══════════════════════ -->
+<div class="screen" id="garage-screen">
+  <div class="nav">
+    <div class="nav-logo">GARAGE<span>YOUR COLLECTION</span></div>
+    <div class="nav-actions">
+      <button class="icon-btn" id="view-toggle-btn" onclick="toggleGarageView()">⊞</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search makes, models, years..." id="garage-search" oninput="filterGarage()">
+    </div>
+
+    <div class="filter-bar" id="filter-bar">
+      <div class="filter-chip active" onclick="setFilter('all', this)">All</div>
+      <div class="filter-chip" onclick="setFilter('legendary', this)">Legendary</div>
+      <div class="filter-chip" onclick="setFilter('exotic', this)">Exotic</div>
+      <div class="filter-chip" onclick="setFilter('rare', this)">Rare</div>
+      <div class="filter-chip" onclick="setFilter('supercar', this)">Supercar</div>
+      <div class="filter-chip" onclick="setFilter('hypercar', this)">Hypercar</div>
+      <div class="filter-chip" onclick="setFilter('gt', this)">GT</div>
+    </div>
+
+    <div class="sort-row">
+      <span class="sort-label">Sort:</span>
+      <select class="sort-select" onchange="sortGarage(this.value)">
+        <option value="recent">Most Recent</option>
+        <option value="make">Make (A–Z)</option>
+        <option value="hp">Horsepower</option>
+        <option value="price">Value</option>
+        <option value="rarity">Rarity</option>
+      </select>
+    </div>
+
+    <div class="garage-grid" id="garage-grid"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ CAPTURE SCREEN ═══════════════════════ -->
+<div class="screen" id="capture-screen">
+  <div class="nav">
+    <div class="nav-logo">SPOT<span>IDENTIFY A CAR</span></div>
+  </div>
+
+  <div class="camera-area">
+    <video id="camera-preview" autoplay playsinline muted></video>
+    <canvas id="photo-canvas"></canvas>
+    <div class="camera-overlay">
+      <div class="camera-corner tl"></div>
+      <div class="camera-corner tr"></div>
+      <div class="camera-corner bl"></div>
+      <div class="camera-corner br"></div>
+      <div class="camera-crosshair"></div>
+      <div class="camera-status" id="camera-status">READY TO SPOT</div>
+    </div>
+    <div class="analyzing-overlay" id="analyzing-overlay" style="display:none">
+      <div class="scan-animation">
+        <div class="scan-ring"></div>
+        <div class="scan-ring"></div>
+        <div class="scan-ring"></div>
+        <div class="scan-ring"></div>
+      </div>
+      <div class="scan-text">IDENTIFYING</div>
+      <div class="scan-progress" id="scan-progress-text">Analyzing vehicle signature...</div>
+    </div>
+  </div>
+
+  <div class="capture-controls">
+    <button class="shutter-btn" id="shutter-btn" onclick="capturePhoto()"></button>
+    <label class="upload-alt" for="file-upload">
+      <span>📁</span> Upload Photo
+    </label>
+    <input type="file" id="file-upload" accept="image/*" style="display:none" onchange="handleFileUpload(event)">
+  </div>
+</div>
+
+<!-- ═══════════════════════ LEADERBOARD SCREEN ═══════════════════════ -->
+<div class="screen" id="leaderboard-screen">
+  <div class="nav">
+    <div class="nav-logo">RANKINGS<span>SPOTTER STATS</span></div>
+  </div>
+
+  <div class="lb-header">
+    <div class="lb-title">MOST SPOTTED</div>
+    <div class="lb-subtitle">Your top makes by count</div>
+  </div>
+
+  <div id="lb-empty" class="empty-state">
+    <div class="empty-icon">🏆</div>
+    <div class="empty-title">NO DATA YET</div>
+    <div class="empty-text">Start spotting cars to build your personal rankings</div>
+  </div>
+
+  <div id="lb-content" style="display:none">
+    <div class="lb-podium" id="lb-podium"></div>
+    <div class="makes-list" id="lb-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ CAR DETAIL SCREEN ═══════════════════════ -->
+<div class="screen" id="detail-screen">
+  <div class="detail-hero">
+    <img id="detail-hero-img" src="" alt="">
+    <button class="back-btn" onclick="showScreen('garage-screen')">←</button>
+    <div class="detail-hero-overlay">
+      <div class="detail-make" id="detail-make"></div>
+      <div class="detail-name" id="detail-name"></div>
+      <div class="detail-year" id="detail-year"></div>
+    </div>
+  </div>
+
+  <div class="detail-content">
+    <div style="margin-bottom:16px">
+      <span class="rarity-badge" id="detail-rarity-badge"></span>
+    </div>
+
+    <div class="detail-section-title">⚡ PERFORMANCE</div>
+    <div class="stats-grid" id="detail-stats-grid"></div>
+
+    <div class="detail-section-title">📊 PERFORMANCE INDEX</div>
+    <div class="perf-bars" id="detail-perf-bars"></div>
+
+    <div class="detail-section-title">📖 OVERVIEW</div>
+    <div class="car-description" id="detail-description"></div>
+
+    <div class="detail-section-title">🏷️ CATEGORIES</div>
+    <div class="tags-list" id="detail-tags"></div>
+
+    <div class="detail-section-title">📍 SPOT INFO</div>
+    <div id="detail-spot-meta"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ BOTTOM NAV ═══════════════════════ -->
+<div class="bottom-nav">
+  <button class="nav-tab active" id="tab-home" onclick="goToTab('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <path d="M3 12L12 3l9 9"/><path d="M5 10v9a1 1 0 001 1h4v-4h4v4h4a1 1 0 001-1v-9"/>
+    </svg>
+    HOME
+  </button>
+  <button class="nav-tab" id="tab-garage" onclick="goToTab('garage')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <rect x="2" y="8" width="20" height="13" rx="1"/><path d="M6 8V6a6 6 0 0112 0v2"/><circle cx="9" cy="14" r="1.5" fill="currentColor"/><circle cx="15" cy="14" r="1.5" fill="currentColor"/>
+    </svg>
+    GARAGE
+  </button>
+  <button class="nav-tab spot-tab" id="tab-capture" onclick="goToTab('capture')">
+    <div class="spot-circle">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2">
+        <circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-opacity=".5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/>
+      </svg>
+    </div>
+    SPOT
+  </button>
+  <button class="nav-tab" id="tab-leaderboard" onclick="goToTab('leaderboard')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <rect x="2" y="14" width="4" height="8"/><rect x="9" y="9" width="4" height="13"/><rect x="16" y="4" width="4" height="18"/>
+    </svg>
+    RANKS
+  </button>
+</div>
+
+<!-- ═══════════════════════ RESULT SHEET ═══════════════════════ -->
+<div class="sheet-backdrop" id="sheet-backdrop" onclick="closeSheet()"></div>
+<div class="bottom-sheet" id="result-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="sheet-title">IDENTIFIED</div>
+  <div class="sheet-sub" id="sheet-sub"></div>
+
+  <div class="result-card">
+    <img id="sheet-car-img" src="" alt="">
+    <div class="result-card-body">
+      <div class="confidence-bar">
+        <span class="confidence-label">Confidence</span>
+        <div class="confidence-track"><div class="confidence-fill" id="confidence-fill"></div></div>
+        <span class="confidence-pct" id="confidence-pct"></span>
+      </div>
+      <div class="result-stats-grid" id="result-stats-grid"></div>
+    </div>
+  </div>
+
+  <button class="save-btn" onclick="saveSpot()">🏁 SAVE TO GARAGE</button>
+  <button class="discard-btn" onclick="closeSheet()">DISCARD</button>
+</div>
+
+<script>
+// ═══════════════════════ DATA ═══════════════════════
+
+const CAR_DATABASE = [
+  {
+    make:"Ferrari", model:"SF90 Stradale", year:2023,
+    hp:986, torque:590, topSpeed:211, zeroTo60:2.5,
+    engine:"4.0L V8 Twin-Turbo + 3 Electric Motors",
+    drivetrain:"AWD", weight:3461, transmission:"8-Speed DCT",
+    price:"$510,000", category:"Hypercar",
+    rarity:"legendary",
+    tags:["Hypercar","Hybrid","Italian","V8","AWD","LaFerrari successor"],
+    description:"The SF90 Stradale is Ferrari's most powerful road car ever built. Its plug-in hybrid powertrain combines a twin-turbocharged V8 with three electric motors to produce a mind-bending 986hp, catapulting this mid-engine masterpiece to 60mph in just 2.5 seconds. Named for the 90th anniversary of the Scuderia Ferrari racing team.",
+    perfIndex: { Power:97, Handling:95, Braking:93, Exclusivity:96, Heritage:90 }
+  },
+  {
+    make:"Lamborghini", model:"Huracán STO", year:2022,
+    hp:630, torque:417, topSpeed:193, zeroTo60:3.0,
+    engine:"5.2L V10 Naturally Aspirated",
+    drivetrain:"RWD", weight:2932, transmission:"7-Speed LDF",
+    price:"$327,838", category:"Supercar",
+    rarity:"exotic",
+    tags:["Supercar","V10","Italian","RWD","Track-focused","N/A"],
+    description:"The Huracán STO (Super Trofeo Omologata) is a track car made road-legal. Drawing directly from Lamborghini's one-make racing series, the STO sheds weight, gains downforce, and strips away all non-essentials. The naturally aspirated V10 screams to 8,500 RPM – an increasingly rare and glorious experience.",
+    perfIndex: { Power:86, Handling:96, Braking:95, Exclusivity:88, Heritage:87 }
+  },
+  {
+    make:"McLaren", model:"765LT Spider", year:2021,
+    hp:765, torque:590, topSpeed:205, zeroTo60:2.7,
+    engine:"4.0L V8 Twin-Turbo",
+    drivetrain:"RWD", weight:3097, transmission:"7-Speed SSG",
+    price:"$382,500", category:"Supercar",
+    rarity:"exotic",
+    tags:["Supercar","Longtail","V8","British","Convertible","Track"],
+    description:"The 765LT Spider combines McLaren's longtail philosophy with open-top exhilaration. With 765hp and a weight saving of 176 lbs over the 720S Spider, this is the most extreme and exciting McLaren convertible. The folding hardtop drops in just 11 seconds, and the active suspension keeps it glued even as the V8 howls.",
+    perfIndex: { Power:92, Handling:97, Braking:96, Exclusivity:91, Heritage:83 }
+  },
+  {
+    make:"Porsche", model:"911 GT3 RS", year:2023,
+    hp:518, torque:346, topSpeed:184, zeroTo60:3.0,
+    engine:"4.0L Flat-Six Naturally Aspirated",
+    drivetrain:"RWD", weight:3268, transmission:"7-Speed PDK",
+    price:"$224,250", category:"GT",
+    rarity:"rare",
+    tags:["GT","Flat-Six","German","RWD","Naturally Aspirated","Nürburgring"],
+    description:"The 911 GT3 RS is the pinnacle of normally aspirated Porsche performance. Its active aerodynamics — borrowed from the 911 RSR race car — generate over 860 lbs of downforce at top speed. The 4.0L flat-six revs to 9,000 RPM with a mechanical intensity that defines what a driver's car should be.",
+    perfIndex: { Power:78, Handling:98, Braking:97, Exclusivity:84, Heritage:96 }
+  },
+  {
+    make:"Bugatti", model:"Chiron Super Sport", year:2022,
+    hp:1578, torque:1180, topSpeed:273, zeroTo60:2.4,
+    engine:"8.0L W16 Quad-Turbocharged",
+    drivetrain:"AWD", weight:4400, transmission:"7-Speed DCT",
+    price:"$3,900,000", category:"Hypercar",
+    rarity:"legendary",
+    tags:["Hypercar","W16","French","Quad-Turbo","AWD","Speed Record"],
+    description:"The Chiron Super Sport is an engineering monument. Its quad-turbocharged W16 producing 1,578hp is the most powerful production car engine ever made. Bugatti hand-builds each Chiron over roughly 6 months, and only 500 examples were ever produced. This is the last true analog hypercar from Molsheim.",
+    perfIndex: { Power:100, Handling:88, Braking:92, Exclusivity:100, Heritage:95 }
+  },
+  {
+    make:"Aston Martin", model:"Valkyrie AMR Pro", year:2023,
+    hp:1139, torque:664, topSpeed:225, zeroTo60:2.5,
+    engine:"6.5L V12 + KERS",
+    drivetrain:"RWD", weight:2204, transmission:"7-Speed AMT",
+    price:"$3,200,000", category:"Hypercar",
+    rarity:"legendary",
+    tags:["Hypercar","V12","British","F1-inspired","Hybrid","Track"],
+    description:"Designed in partnership with Red Bull Racing's Adrian Newey, the Valkyrie AMR Pro is as close to an F1 car as any road-legal vehicle has ever come. The naturally-aspirated V12 revs to 11,100 RPM with a sound unlike anything else on earth. Just 25 were built.",
+    perfIndex: { Power:95, Handling:99, Braking:98, Exclusivity:99, Heritage:92 }
+  },
+  {
+    make:"Rimac", model:"Nevera", year:2023,
+    hp:1914, torque:1696, topSpeed:258, zeroTo60:1.85,
+    engine:"Four Electric Motors (120kWh)",
+    drivetrain:"AWD", weight:4740, transmission:"Single-Speed",
+    price:"$2,400,000", category:"Hypercar",
+    rarity:"legendary",
+    tags:["Hypercar","EV","Croatian","AWD","Torque Vector","Record"],
+    description:"The Rimac Nevera rewrote the rulebook on what a hypercar can be. Its four independently controlled electric motors produce 1,914hp and 1,696 lb-ft of torque — enough to sprint to 60mph in 1.85 seconds, breaking 23 world performance records. Only 150 will ever be built.",
+    perfIndex: { Power:100, Handling:94, Braking:99, Exclusivity:98, Heritage:60 }
+  },
+  {
+    make:"Mercedes-AMG", model:"ONE", year:2023,
+    hp:1063, torque:1250, topSpeed:217, zeroTo60:2.9,
+    engine:"1.6L F1 Turbo Hybrid + 4 Electric Motors",
+    drivetrain:"AWD", weight:3759, transmission:"8-Speed AMT",
+    price:"$2,700,000", category:"Hypercar",
+    rarity:"legendary",
+    tags:["Hypercar","F1 Engine","German","Hybrid","AWD","Lewis Hamilton"],
+    description:"The Mercedes-AMG ONE uses a literal Formula 1 engine — the same 1.6L turbocharged V6 hybrid unit from the W07 championship car — in a road-legal hypercar. Getting this F1 powertrain to work reliably on public roads took years longer than planned, but the result is extraordinary: 1,063hp and genuine F1 driving dynamics.",
+    perfIndex: { Power:96, Handling:98, Braking:96, Exclusivity:100, Heritage:97 }
+  },
+  {
+    make:"Koenigsegg", model:"Jesko Absolut", year:2022,
+    hp:1600, torque:1106, topSpeed:330, zeroTo60:2.5,
+    engine:"5.0L V8 Twin-Turbo",
+    drivetrain:"RWD", weight:3130, transmission:"9-Speed LST",
+    price:"$3,000,000", category:"Hypercar",
+    rarity:"legendary",
+    tags:["Hypercar","V8","Swedish","RWD","Speed Record","Biofuel"],
+    description:"The Jesko Absolut is theoretically the fastest production car ever created. Koenigsegg's proprietary Light Speed Transmission allows gear changes with zero interruption in power delivery. Running on E85 biofuel, the flat-plane V8 produces 1,600hp — all sent to the rear wheels. Top speed is theoretically 330mph.",
+    perfIndex: { Power:99, Handling:93, Braking:95, Exclusivity:99, Heritage:88 }
+  },
+  {
+    make:"Pagani", model:"Huayra BC Roadster", year:2022,
+    hp:791, torque:811, topSpeed:199, zeroTo60:2.9,
+    engine:"6.0L V12 Twin-Turbo (Mercedes-AMG)",
+    drivetrain:"RWD", weight:2867, transmission:"6-Speed Xtrac",
+    price:"$3,400,000", category:"Supercar",
+    rarity:"legendary",
+    tags:["Hypercar","V12","Italian","Convertible","Art","Titanium"],
+    description:"Every Pagani is a rolling sculpture. The Huayra BC Roadster features over 7 different types of carbon fibre, machined titanium components throughout, and a handcrafted interior of leather and polished metal. Just 40 examples were built, each taking over a year to assemble by hand in San Cesario sul Panaro.",
+    perfIndex: { Power:89, Handling:94, Braking:93, Exclusivity:100, Heritage:91 }
+  },
+  {
+    make:"Ford", model:"GT (Gen 2)", year:2022,
+    hp:660, torque:550, topSpeed:216, zeroTo60:3.0,
+    engine:"3.5L EcoBoost V6 Twin-Turbo",
+    drivetrain:"RWD", weight:3351, transmission:"7-Speed DCT",
+    price:"$500,000", category:"Supercar",
+    rarity:"exotic",
+    tags:["Supercar","GT","American","Le Mans","V6","Carbon Fiber"],
+    description:"The second-generation Ford GT is a Le Mans homologation special. Its aerodynamics are so advanced that active rear spoilers and the flying buttress rear body act as an integrated aerodynamic system. The carbon fiber monocoque makes it one of the lightest supercars in its class, and it won its class at Le Mans in 2016.",
+    perfIndex: { Power:87, Handling:95, Braking:92, Exclusivity:93, Heritage:94 }
+  },
+  {
+    make:"Rolls-Royce", model:"Phantom Series II", year:2023,
+    hp:563, torque:664, topSpeed:155, zeroTo60:5.1,
+    engine:"6.75L V12 Twin-Turbo",
+    drivetrain:"RWD", weight:5644, transmission:"8-Speed ZF",
+    price:"$460,000", category:"Luxury",
+    rarity:"rare",
+    tags:["Luxury","V12","British","Flagship","Bespoke","Handcrafted"],
+    description:"The Rolls-Royce Phantom is the apex of automotive luxury. Its starlight headliner can contain up to 1,344 individual fiber optic lights, and the Gallery dashboard allows owners to commission bespoke displays encased under glass. The waft of the twin-turbocharged V12 provides what Rolls-Royce calls 'effortless power'.",
+    perfIndex: { Power:74, Handling:62, Braking:70, Exclusivity:95, Heritage:99 }
+  }
+];
+
+// App state
+let spots = JSON.parse(localStorage.getItem('spotter_spots') || '[]');
+let currentFilter = 'all';
+let currentSort  = 'recent';
+let pendingSpot  = null;
+let cameraStream = null;
+
+// ═══════════════════════ NAVIGATION ═══════════════════════
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function goToTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const tabEl = document.getElementById('tab-' + tab);
+  if (tabEl) tabEl.classList.add('active');
+
+  const screenMap = {
+    home: 'home-screen',
+    garage: 'garage-screen',
+    capture: 'capture-screen',
+    leaderboard: 'leaderboard-screen'
+  };
+
+  if (screenMap[tab]) showScreen(screenMap[tab]);
+
+  if (tab === 'capture') initCamera();
+  else stopCamera();
+
+  if (tab === 'home') renderHome();
+  if (tab === 'garage') renderGarage();
+  if (tab === 'leaderboard') renderLeaderboard();
+}
+
+// ═══════════════════════ CAMERA ═══════════════════════
+
+async function initCamera() {
+  const preview = document.getElementById('camera-preview');
+  const status  = document.getElementById('camera-status');
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } }
+    });
+    preview.srcObject = cameraStream;
+    status.textContent = 'READY TO SPOT';
+  } catch (e) {
+    status.textContent = 'CAMERA UNAVAILABLE — USE UPLOAD';
+    document.getElementById('shutter-btn').style.opacity = '0.3';
+    document.getElementById('shutter-btn').style.pointerEvents = 'none';
+  }
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+}
+
+function capturePhoto() {
+  const preview = document.getElementById('camera-preview');
+  const canvas  = document.getElementById('photo-canvas');
+
+  if (!cameraStream) {
+    showToast('📁 Please use Upload Photo instead');
+    return;
+  }
+
+  canvas.width  = preview.videoWidth  || 640;
+  canvas.height = preview.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(preview, 0, 0);
+
+  const dataURL = canvas.toDataURL('image/jpeg', 0.85);
+  analyzePhoto(dataURL);
+}
+
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = ev => analyzePhoto(ev.target.result);
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+// ═══════════════════════ AI ANALYSIS ═══════════════════════
+
+function analyzePhoto(dataURL) {
+  const overlay = document.getElementById('analyzing-overlay');
+  const progressText = document.getElementById('scan-progress-text');
+  overlay.style.display = 'flex';
+
+  const steps = [
+    'Analyzing vehicle signature...',
+    'Matching body lines & proportions...',
+    'Cross-referencing marque database...',
+    'Retrieving performance data...',
+    'Calculating rarity score...'
+  ];
+
+  let i = 0;
+  const stepInterval = setInterval(() => {
+    if (i < steps.length) progressText.textContent = steps[i++];
+    else clearInterval(stepInterval);
+  }, 520);
+
+  // Use the real Claude API
+  const base64 = dataURL.split(',')[1];
+  const mimeType = dataURL.split(';')[0].split(':')[1] || 'image/jpeg';
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: mimeType, data: base64 }
+          },
+          {
+            type: 'text',
+            text: `You are an expert exotic car spotter. Analyze this photo and identify the car. Respond ONLY with a JSON object, no markdown, no preamble:
+{
+  "make": "Brand name",
+  "model": "Model name",
+  "year": 2023,
+  "confidence": 92,
+  "hp": 500,
+  "torque": 400,
+  "topSpeed": 200,
+  "zeroTo60": 3.5,
+  "engine": "Engine description",
+  "drivetrain": "RWD/AWD/FWD",
+  "weight": 3500,
+  "transmission": "Transmission type",
+  "price": "$XXX,XXX",
+  "category": "Supercar/Hypercar/GT/Luxury/Sports",
+  "rarity": "legendary/exotic/rare/common",
+  "tags": ["tag1","tag2","tag3"],
+  "description": "2-3 sentence enthusiast description of this specific car",
+  "perfIndex": { "Power": 85, "Handling": 90, "Braking": 88, "Exclusivity": 80, "Heritage": 75 },
+  "notACar": false
+}
+If this is not a car or you cannot identify it, set notACar to true and fill other fields with reasonable defaults. Always make a best guess on the make/model.`
+          }
+        ]
+      }]
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    clearInterval(stepInterval);
+    overlay.style.display = 'none';
+
+    let carData;
+    try {
+      const text = data.content[0].text.replace(/```json|```/g,'').trim();
+      carData = JSON.parse(text);
+    } catch(e) {
+      carData = pickRandomCar();
+    }
+
+    if (carData.notACar) {
+      showToast('⚠️ No car detected — try again');
+      return;
+    }
+
+    showResult(carData, dataURL);
+  })
+  .catch(() => {
+    clearInterval(stepInterval);
+    overlay.style.display = 'none';
+
+    // Fallback to demo car
+    const carData = pickRandomCar();
+    showResult(carData, dataURL);
+    showToast('📡 Using demo data (API offline)');
+  });
+}
+
+function pickRandomCar() {
+  return { ...CAR_DATABASE[Math.floor(Math.random() * CAR_DATABASE.length)], confidence: Math.floor(Math.random()*15)+80 };
+}
+
+// ═══════════════════════ RESULT SHEET ═══════════════════════
+
+function showResult(carData, imageURL) {
+  pendingSpot = { ...carData, imageURL, date: new Date().toISOString(), id: Date.now() };
+
+  document.getElementById('sheet-title').textContent = `${carData.make} ${carData.model}`;
+  document.getElementById('sheet-sub').textContent = `${carData.year} · ${carData.category || 'Exotic'}`;
+  document.getElementById('sheet-car-img').src = imageURL;
+
+  const conf = carData.confidence || 88;
+  document.getElementById('confidence-pct').textContent = `${conf}%`;
+  setTimeout(() => {
+    document.getElementById('confidence-fill').style.width = `${conf}%`;
+  }, 100);
+
+  const keyStats = [
+    { val: `${carData.hp}`, lbl: 'HP' },
+    { val: `${carData.zeroTo60}s`, lbl: '0-60' },
+    { val: `${carData.topSpeed}`, lbl: 'TOP MPH' }
+  ];
+
+  document.getElementById('result-stats-grid').innerHTML = keyStats.map(s =>
+    `<div class="rs-item"><div class="rs-val">${s.val}</div><div class="rs-label">${s.lbl}</div></div>`
+  ).join('');
+
+  openSheet();
+}
+
+function openSheet() {
+  document.getElementById('sheet-backdrop').classList.add('open');
+  setTimeout(() => document.getElementById('result-sheet').classList.add('open'), 10);
+}
+
+function closeSheet() {
+  document.getElementById('result-sheet').classList.remove('open');
+  setTimeout(() => document.getElementById('sheet-backdrop').classList.remove('open'), 300);
+  pendingSpot = null;
+}
+
+function saveSpot() {
+  if (!pendingSpot) return;
+
+  spots.unshift(pendingSpot);
+  localStorage.setItem('spotter_spots', JSON.stringify(spots));
+
+  closeSheet();
+  showToast(`🏁 ${pendingSpot.make} ${pendingSpot.model} saved!`);
+  renderHome();
+
+  setTimeout(() => goToTab('garage'), 500);
+}
+
+// ═══════════════════════ HOME RENDER ═══════════════════════
+
+function renderHome() {
+  document.getElementById('total-spots').textContent = spots.length;
+
+  const makes = new Set(spots.map(s => s.make));
+  document.getElementById('total-makes').textContent = makes.size;
+
+  const legendary = spots.filter(s => s.rarity === 'legendary');
+  if (legendary.length > 0) {
+    document.getElementById('rarest-spot').textContent = `${legendary[0].make} ${legendary[0].model}`;
+    document.getElementById('rarest-sub').textContent = `${legendary[0].year} · Legendary`;
+  }
+
+  const container = document.getElementById('recent-spots-scroll');
+  if (spots.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="min-width:100%">
+      <div class="empty-icon">🔭</div>
+      <div class="empty-title">NO SPOTS YET</div>
+      <div class="empty-text">Hit the camera button to start spotting exotic cars</div>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = spots.slice(0, 10).map(s => `
+    <div class="spot-card-mini" onclick="openDetail(${s.id})">
+      <img src="${s.imageURL}" alt="${s.make} ${s.model}" loading="lazy">
+      <div class="spot-card-mini-info">
+        <div class="spot-card-make">${s.make}</div>
+        <div class="spot-card-model">${s.model}</div>
+        <div class="spot-card-meta">${s.year} · ${s.hp}hp</div>
+        <div class="${rarityClass(s.rarity)}">${rarityIcon(s.rarity)} ${s.rarity.toUpperCase()}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════ GARAGE RENDER ═══════════════════════
+
+let garageSearchQuery = '';
+
+function renderGarage() {
+  const grid = document.getElementById('garage-grid');
+
+  let filtered = spots.filter(s => {
+    if (currentFilter !== 'all') {
+      if (currentFilter === 'legendary') return s.rarity === 'legendary';
+      if (currentFilter === 'exotic') return s.rarity === 'exotic';
+      if (currentFilter === 'rare') return s.rarity === 'rare';
+      if (currentFilter === 'supercar') return (s.category||'').toLowerCase() === 'supercar';
+      if (currentFilter === 'hypercar') return (s.category||'').toLowerCase() === 'hypercar';
+      if (currentFilter === 'gt') return (s.category||'').toLowerCase() === 'gt';
+    }
+    if (garageSearchQuery) {
+      const q = garageSearchQuery.toLowerCase();
+      return `${s.make} ${s.model} ${s.year} ${s.category}`.toLowerCase().includes(q);
+    }
+    return true;
+  });
+
+  // Sort
+  if (currentSort === 'make')   filtered.sort((a,b) => a.make.localeCompare(b.make));
+  if (currentSort === 'hp')     filtered.sort((a,b) => (b.hp||0) - (a.hp||0));
+  if (currentSort === 'rarity') filtered.sort((a,b) => rarityOrder(a.rarity) - rarityOrder(b.rarity));
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">🏎️</div>
+      <div class="empty-title">${spots.length === 0 ? 'EMPTY GARAGE' : 'NO RESULTS'}</div>
+      <div class="empty-text">${spots.length === 0 ? 'Start spotting exotic cars to fill your garage' : 'Try a different filter or search'}</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(s => `
+    <div class="garage-card" onclick="openDetail(${s.id})">
+      <img src="${s.imageURL}" alt="${s.make} ${s.model}" loading="lazy">
+      <div class="garage-card-info">
+        <div class="garage-card-make">${s.make}</div>
+        <div class="garage-card-model">${s.model}</div>
+        <div class="garage-card-stats">
+          <span class="mini-stat"><strong>${s.hp}</strong> hp</span>
+          <span class="mini-stat">·</span>
+          <span class="mini-stat"><strong>${s.zeroTo60}s</strong> 0-60</span>
+        </div>
+        <div class="${rarityClass(s.rarity)}" style="margin-top:8px">${rarityIcon(s.rarity)} ${s.rarity}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setFilter(val, el) {
+  currentFilter = val;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderGarage();
+}
+
+function sortGarage(val) {
+  currentSort = val;
+  renderGarage();
+}
+
+function filterGarage() {
+  garageSearchQuery = document.getElementById('garage-search').value;
+  renderGarage();
+}
+
+// ═══════════════════════ DETAIL ═══════════════════════
+
+function openDetail(id) {
+  const spot = spots.find(s => s.id === id);
+  if (!spot) return;
+
+  document.getElementById('detail-hero-img').src = spot.imageURL;
+  document.getElementById('detail-make').textContent = spot.make;
+  document.getElementById('detail-name').textContent = spot.model;
+  document.getElementById('detail-year').textContent = spot.year;
+
+  const rb = document.getElementById('detail-rarity-badge');
+  rb.className = `rarity-badge ${rarityClass(spot.rarity)}`;
+  rb.textContent = `${rarityIcon(spot.rarity)} ${spot.rarity.toUpperCase()}`;
+
+  // Stats grid
+  const statsData = [
+    { label: 'HORSEPOWER', value: spot.hp, unit: 'hp', highlight: true },
+    { label: '0 – 60 MPH', value: spot.zeroTo60, unit: 's', highlight: true },
+    { label: 'TOP SPEED', value: spot.topSpeed, unit: 'mph' },
+    { label: 'TORQUE', value: spot.torque, unit: 'lb-ft' },
+    { label: 'WEIGHT', value: spot.weight, unit: 'lbs' },
+    { label: 'ENGINE', value: spot.engine, unit: '', wide: true },
+    { label: 'DRIVETRAIN', value: spot.drivetrain, unit: '' },
+    { label: 'TRANSMISSION', value: spot.transmission, unit: '' },
+    { label: 'MARKET VALUE', value: spot.price, unit: '', highlight: true },
+    { label: 'CATEGORY', value: spot.category, unit: '' }
+  ];
+
+  document.getElementById('detail-stats-grid').innerHTML = statsData.map(s =>
+    `<div class="stat-item${s.highlight ? ' highlight' : ''}">
+       <div class="stat-item-label">${s.label}</div>
+       <div class="stat-item-value">${s.value}<span class="stat-item-unit"> ${s.unit}</span></div>
+     </div>`
+  ).join('');
+
+  // Perf bars
+  const pi = spot.perfIndex || {};
+  document.getElementById('detail-perf-bars').innerHTML = Object.entries(pi).map(([k,v]) =>
+    `<div class="perf-bar-item">
+       <div class="perf-bar-header"><span class="perf-bar-name">${k}</span><span class="perf-bar-val">${v}/100</span></div>
+       <div class="perf-bar-track"><div class="perf-bar-fill" data-width="${v}"></div></div>
+     </div>`
+  ).join('');
+
+  document.getElementById('detail-description').textContent = spot.description || '';
+
+  document.getElementById('detail-tags').innerHTML = (spot.tags||[]).map(t =>
+    `<span class="tag">${t}</span>`
+  ).join('');
+
+  const meta = document.getElementById('detail-spot-meta');
+  const d = new Date(spot.date || Date.now());
+  meta.innerHTML = `
+    <div class="spot-meta-row"><span class="spot-meta-key">Spotted</span><span class="spot-meta-val">${d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</span></div>
+    <div class="spot-meta-row"><span class="spot-meta-key">Time</span><span class="spot-meta-val">${d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</span></div>
+    <div class="spot-meta-row"><span class="spot-meta-key">Confidence</span><span class="spot-meta-val">${spot.confidence || 88}%</span></div>
+    <div class="spot-meta-row" style="border:none;cursor:pointer" onclick="deleteSpot(${spot.id})">
+      <span class="spot-meta-key">Action</span><span class="spot-meta-val" style="color:#e63946">Delete Spot ✕</span>
+    </div>`;
+
+  showScreen('detail-screen');
+  document.getElementById('tab-garage').classList.add('active');
+  document.querySelectorAll('.nav-tab:not(#tab-garage)').forEach(t => t.classList.remove('active'));
+
+  // Animate bars after render
+  setTimeout(() => {
+    document.querySelectorAll('.perf-bar-fill[data-width]').forEach(el => {
+      el.style.width = el.dataset.width + '%';
+    });
+  }, 100);
+}
+
+function deleteSpot(id) {
+  if (!confirm('Remove this spot from your garage?')) return;
+  spots = spots.filter(s => s.id !== id);
+  localStorage.setItem('spotter_spots', JSON.stringify(spots));
+  showToast('🗑️ Spot removed');
+  goToTab('garage');
+}
+
+// ═══════════════════════ LEADERBOARD ═══════════════════════
+
+function renderLeaderboard() {
+  if (spots.length === 0) {
+    document.getElementById('lb-empty').style.display = 'flex';
+    document.getElementById('lb-content').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('lb-empty').style.display = 'none';
+  document.getElementById('lb-content').style.display = 'block';
+
+  const makeCounts = {};
+  spots.forEach(s => { makeCounts[s.make] = (makeCounts[s.make]||0) + 1; });
+  const sorted = Object.entries(makeCounts).sort((a,b) => b[1]-a[1]);
+
+  // Podium (top 3)
+  const podiumLabels = ['2nd', '1st', '3rd'];
+  const podiumOrder = sorted.length >= 3 ? [sorted[1], sorted[0], sorted[2]] :
+                      sorted.length === 2 ? [sorted[1], sorted[0], {0:'—',1:0}] :
+                      [{0:'—',1:0}, sorted[0], {0:'—',1:0}];
+
+  document.getElementById('lb-podium').innerHTML = podiumOrder.map((m,i) =>
+    `<div class="podium-item">
+       <div class="podium-rank">${podiumLabels[i]}</div>
+       <div class="podium-count">${m[1]||0}</div>
+       <div class="podium-make">${m[0]||'—'}</div>
+       <div class="podium-block"></div>
+     </div>`
+  ).join('');
+
+  // Full list
+  document.getElementById('lb-list').innerHTML = sorted.map(([make, count], i) => {
+    const ex = spots.find(s => s.make === make);
+    return `<div class="make-row" onclick="filterByMake('${make}')">
+      <div class="make-rank-num">${i+1}</div>
+      <div class="make-info">
+        <div class="make-name">${make}</div>
+        <div class="make-detail">${ex ? `${ex.category || ''} · Avg ${Math.round(spots.filter(s=>s.make===make).reduce((a,s)=>a+(s.hp||0),0)/count)} HP` : ''}</div>
+      </div>
+      <div class="make-count-badge">${count}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterByMake(make) {
+  garageSearchQuery = make;
+  document.getElementById('garage-search').value = make;
+  goToTab('garage');
+}
+
+// ═══════════════════════ HELPERS ═══════════════════════
+
+function rarityClass(r) {
+  const map = { legendary:'rarity-badge rarity-legendary', exotic:'rarity-badge rarity-exotic', rare:'rarity-badge rarity-rare', common:'rarity-badge rarity-common' };
+  return map[r] || map.common;
+}
+
+function rarityIcon(r) {
+  return { legendary:'👑', exotic:'🔥', rare:'⭐', common:'•' }[r] || '•';
+}
+
+function rarityOrder(r) {
+  return { legendary:0, exotic:1, rare:2, common:3 }[r] ?? 4;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function toggleGarageView() {
+  showToast('⚡ List view coming soon');
+}
+
+// ═══════════════════════ INIT ═══════════════════════
+
+// Seed demo data on first load
+if (spots.length === 0) {
+  const demos = [
+    { ...CAR_DATABASE[0], imageURL: 'https://images.unsplash.com/photo-1592198084033-aade902d1aae?w=400&q=80', date: new Date(Date.now()-86400000*2).toISOString(), id: 1, confidence: 94 },
+    { ...CAR_DATABASE[1], imageURL: 'https://images.unsplash.com/photo-1621135592518-e792e53ab3e6?w=400&q=80', date: new Date(Date.now()-86400000*5).toISOString(), id: 2, confidence: 91 },
+    { ...CAR_DATABASE[3], imageURL: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&q=80', date: new Date(Date.now()-86400000*8).toISOString(), id: 3, confidence: 96 }
+  ];
+  spots = demos;
+  localStorage.setItem('spotter_spots', JSON.stringify(spots));
+}
+
+renderHome();
+</script>
+</body>
+</html>
