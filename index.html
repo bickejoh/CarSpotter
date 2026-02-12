@@ -664,15 +664,64 @@ function aiIdentifyMyCar(dataURL){
   const subEl=document.getElementById('ai-fill-sub');
   const badgeEl=document.getElementById('ai-filled-badge');
   if(statusEl)statusEl.style.display='flex';if(badgeEl)badgeEl.style.display='none';
-  const steps=[['Identifying vehicle…','Analysing photo'],['Matching body style…','Cross-referencing database'],['Pulling specs…','Retrieving performance figures'],['Estimating value…','Checking current market data']];
-  let i=0;const iv=setInterval(()=>{if(i<steps.length&&labelEl&&subEl){labelEl.textContent=steps[i][0];subEl.textContent=steps[i][1];i++;}else clearInterval(iv);},700);
+
+  // Loop the animation continuously until the response arrives
+  const steps=[
+    ['Identifying vehicle…','Analysing photo'],
+    ['Matching body style…','Cross-referencing database'],
+    ['Pulling specs…','Retrieving performance figures'],
+    ['Estimating value…','Checking current market data'],
+    ['Almost there…','Processing results']
+  ];
+  let i=0;
+  const iv=setInterval(()=>{
+    if(labelEl&&subEl){
+      const step=steps[i%steps.length];
+      labelEl.textContent=step[0];
+      subEl.textContent=step[1];
+      i++;
+    }
+  },1400);
+
   const base64=dataURL.split(',')[1],mime=dataURL.split(';')[0].split(':')[1]||'image/jpeg';
-  fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mime,data:base64}},{type:'text',text:`Expert exotic car identifier and automotive market analyst. Analyse this photo carefully. Return ONLY JSON (no markdown): {"make":"","model":"","year":2020,"color":"","hp":600,"torque":500,"zeroTo60":3.2,"topSpeed":200,"engine":"","drivetrain":"RWD","weight":3400,"transmission":"","currentEstValue":"$285,000","valueNote":"brief market context sentence","valueLow":"$265,000","valueHigh":"$310,000","notACar":false,"confidence":91}\ncurrentEstValue = realistic mid-market estimate for this year/model in good condition today (early 2026). Reflect depreciation or appreciation as appropriate.`}]}]})})
-  .then(r=>r.json())
+
+  fetch('/api/claude',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1200,
+      messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:mime,data:base64}},
+        {type:'text',text:`Expert exotic car identifier and automotive market analyst. Analyse this photo carefully. Return ONLY a JSON object, no markdown, no extra text, just the raw JSON:\n{"make":"","model":"","year":2020,"color":"","hp":600,"torque":500,"zeroTo60":3.2,"topSpeed":200,"engine":"","drivetrain":"RWD","weight":3400,"transmission":"","currentEstValue":"$285,000","valueNote":"brief market context sentence","valueLow":"$265,000","valueHigh":"$310,000","notACar":false,"confidence":91}\ncurrentEstValue = realistic mid-market estimate for this year/model in good condition today (early 2026). Reflect depreciation or appreciation as appropriate.`}
+      ]}]
+    })
+  })
+  .then(r=>{
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  })
   .then(data=>{
-    clearInterval(iv);if(statusEl)statusEl.style.display='none';
-    let car;try{car=JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());}catch(e){showToast('⚠ Could not parse response');return;}
-    if(car.notACar){showToast('⚠ No car detected');return;}
+    clearInterval(iv);
+    if(statusEl)statusEl.style.display='none';
+    // Handle API-level errors returned in the response body
+    if(data.error){
+      showToast('⚠ API error: '+( data.error.message||JSON.stringify(data.error)));
+      return;
+    }
+    if(!data.content||!data.content[0]){
+      showToast('⚠ Empty response from AI');
+      return;
+    }
+    let car;
+    try{
+      const raw=data.content[0].text.replace(/```json|```/g,'').trim();
+      car=JSON.parse(raw);
+    }catch(e){
+      showToast('⚠ Could not read AI response — try again');
+      return;
+    }
+    if(car.notACar){showToast('⚠ No car detected — try a clearer photo');return;}
     const fill=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
     fill('mc-make',car.make);fill('mc-model',car.model);fill('mc-year',car.year);fill('mc-color',car.color);
     fill('mc-hp',car.hp);fill('mc-060',car.zeroTo60);fill('mc-topspeed',car.topSpeed);fill('mc-torque',car.torque);
@@ -680,9 +729,14 @@ function aiIdentifyMyCar(dataURL){
     fill('mc-value',car.currentEstValue);
     if(car.valueNote){const vs=document.getElementById('val-lookup-status');if(vs){vs.style.display='block';vs.textContent=`✦ ${car.valueNote}${car.valueLow&&car.valueHigh?' — Range: '+car.valueLow+' – '+car.valueHigh:''}`;}}
     if(badgeEl)badgeEl.style.display='block';
-    pendingMyCarData=car;showToast(`✦ ${car.make} ${car.model} identified`);
+    pendingMyCarData=car;
+    showToast(`✦ ${car.make} ${car.model} identified`);
   })
-  .catch(()=>{clearInterval(iv);if(statusEl)statusEl.style.display='none';showToast('📡 AI offline — fill fields manually');});
+  .catch(err=>{
+    clearInterval(iv);
+    if(statusEl)statusEl.style.display='none';
+    showToast('⚠ Error: '+err.message+' — check Netlify function logs');
+  });
 }
 
 function lookupValueForForm(){
