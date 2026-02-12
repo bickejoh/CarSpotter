@@ -2,11 +2,9 @@
 # Tells Netlify where to find your site and your serverless functions
 
 [build]
-  publish = "public"          # Your HTML file lives in the /public folder
-  functions = "netlify/functions"  # Your proxy function lives here
+  publish = "public"
+  functions = "netlify/functions"
 
-# Redirect all calls to /.netlify/functions/claude → /api/claude
-# This means in your app you call /api/claude instead of the full Anthropic URL
 [[redirects]]
   from = "/api/claude"
   to   = "/.netlify/functions/claude"
